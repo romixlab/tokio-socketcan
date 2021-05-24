@@ -8,7 +8,7 @@ license = "MIT"
 repository = "https://github.com/oefd/tokio-socketcan"
 
 [dependencies]
-socketcan = "1.7"
+socketcan = { version = "1.7", git = "https://github.com/romixlab/socketcan-rs.git", branch = "1.7.0" }
 futures = "0.3"
 mio = "0.7"
 libc = "0.2"
