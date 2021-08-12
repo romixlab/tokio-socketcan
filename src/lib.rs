@@ -175,6 +175,21 @@ impl CANSocket {
         })
     }
 
+    #[cfg(feature = "vhrdcan")]
+    pub fn write_frame_vhrd(&self, frame: vhrdcan::FrameRef) -> Result<CANWriteFuture, Error> {
+        use vhrdcan::id::FrameId;
+        let id = match frame.id {
+            FrameId::Standard(sid) => {
+                sid.id() as u32
+            },
+            FrameId::Extended(eid) => {
+                (eid.id() as u32) | 0x80000000
+            }
+        };
+        let frame = CANFrame::new(id, frame.data.clone(), false, false).unwrap();
+        self.write_frame(frame)
+    }
+
     /// Clone the CANSocket by using the `dup` syscall to get another
     /// file descriptor. This method makes clones fairly cheap and
     /// avoids complexity around ownership
