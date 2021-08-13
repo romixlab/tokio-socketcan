@@ -210,17 +210,39 @@ impl CANSocket {
 }
 
 impl Stream for CANSocket {
+    #[cfg(not(feature = "vhrdcan"))]
     type Item = io::Result<CANFrame>;
+    #[cfg(feature = "vhrdcan")]
+    type Item = io::Result<vhrdcan::Frame<8>>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
         loop {
             let mut ready_guard = ready!(self.0.poll_read_ready(cx))?;
             match ready_guard.try_io(|inner| inner.get_ref().get_ref().read_frame()) {
-                Ok(result) => return Poll::Ready(Some(result)),
+                Ok(result) => {
+                    #[cfg(feature = "vhrdcan")]
+                    let result = match result {
+                        Ok(frame) => {
+                            let id = if frame.is_extended() {
+                                vhrdcan::FrameId::Extended(unsafe {
+                                    vhrdcan::id::ExtendedId::new_unchecked(frame.id() & vhrdcan::EXTENDED_ID_ALL_BITS)
+                                })
+                            } else {
+                                vhrdcan::FrameId::Standard(unsafe {
+                                    vhrdcan::id::StandardId::new_unchecked((frame.id() & vhrdcan::STANDARD_ID_ALL_BITS as u32) as u16)
+                                })
+                            };
+                            Ok(vhrdcan::Frame::new(id, frame.data()).unwrap())
+                        }
+                        Err(e) => { Err(e) }
+                    };
+                    return Poll::Ready(Some(result))
+                },
                 Err(_would_block) => continue,
             }
         }
     }
+
 }
 
 impl Sink<CANFrame> for CANSocket {
