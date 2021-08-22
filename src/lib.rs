@@ -180,10 +180,10 @@ impl CANSocket {
         use vhrdcan::id::FrameId;
         let id = match frame.id {
             FrameId::Standard(sid) => {
-                sid.id() as u32
+                sid.inner() as u32
             },
             FrameId::Extended(eid) => {
-                (eid.id() as u32) | 0x80000000
+                (eid.inner() as u32) | 0x80000000
             }
         };
         let frame = CANFrame::new(id, frame.data.clone(), false, false).unwrap();
